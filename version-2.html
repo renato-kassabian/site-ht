@@ -950,9 +950,13 @@
 .s3.learn-simple .step-tabs button { counter-increment: step; position: relative; display: block; padding: 8px 0 4px; border: 0; background: none; font-size: 0; line-height: 0; color: transparent; text-align: left; transition: none; }
 .s3.learn-simple .step-tabs button::before { content: ""; display: block; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, .16); transition: background-color .4s; }
 .s3.learn-simple .step-tabs button::after { content: counter(step, decimal-leading-zero); display: block; margin-top: 12px; font: 400 12px / 1 'Geist Mono', ui-monospace, monospace; color: rgba(255, 255, 255, .42); transition: color .4s; }
-.s3.learn-simple .step-tabs button:hover::before { background: rgba(255, 255, 255, .34); }
-.s3.learn-simple .step-tabs button:has(~ button[aria-selected="true"])::before { background: rgba(255, 255, 255, .55); }
-.s3.learn-simple .step-tabs button[aria-selected="true"]::before, .s3.learn-simple .step-tabs button[aria-selected="true"]:hover::before { background: rgba(255, 255, 255, .92); }
+.s3.learn-simple .step-tabs button:hover::before { background: rgba(255, 255, 255, .26); }
+/* the bar fills while its step plays (like the steps of unico.io): done bars are full, the active one fills over the step's time, then the next step starts */
+.s3.learn-simple .step-tabs .fill { position: absolute; left: 0; top: 8px; height: 3px; width: 0; border-radius: 2px; background: rgba(255, 255, 255, .92); pointer-events: none; }
+.s3.learn-simple .step-tabs button:has(~ button[aria-selected="true"]) .fill, .s3.learn-simple .step-tabs button[aria-selected="true"] .fill { width: 100%; }
+.s3.learn-simple .step-tabs.playing button[aria-selected="true"] .fill { width: 0; animation: step-fill var(--dur, 5s) linear forwards; }
+@keyframes step-fill { from { width: 0; } to { width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .s3.learn-simple .step-tabs.playing button[aria-selected="true"] .fill { animation: none; width: 100%; } }
 .s3.learn-simple .step-tabs button[aria-selected="true"]::after { color: #fff; }
 .s3.learn-simple .step-tabs button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; border-radius: 3px; }
 /* the text */
@@ -1195,7 +1199,7 @@
 <section class="s3 learn-simple" id="s3" data-demo-palette="grey" tabindex="-1" aria-hidden="true" inert>
 <section class="how section wrap" id="how" aria-labelledby="how-title">
  <div class="section-heading"><div><p class="eyebrow">How it works</p><h1 id="how-title">Recognize the same human with<br><em>a token unique to your business.</em></h1></div></div>
- <div class="step-tabs" role="tablist" aria-label="How Human Token works"><button role="tab" id="tab-photo" aria-controls="step-panel" aria-selected="true" data-step="0">Photo</button><button role="tab" id="tab-token" aria-controls="step-panel" aria-selected="false" tabindex="-1" data-step="1">Token</button><button role="tab" id="tab-privacy" aria-controls="step-panel" aria-selected="false" tabindex="-1" data-step="2">Privacy</button><button role="tab" id="tab-return" aria-controls="step-panel" aria-selected="false" tabindex="-1" data-step="3">Return</button></div>
+ <div class="step-tabs" role="tablist" aria-label="How Human Token works"><button role="tab" id="tab-photo" aria-controls="step-panel" aria-selected="true" data-step="0">Photo<i class="fill" aria-hidden="true"></i></button><button role="tab" id="tab-token" aria-controls="step-panel" aria-selected="false" tabindex="-1" data-step="1">Token<i class="fill" aria-hidden="true"></i></button><button role="tab" id="tab-privacy" aria-controls="step-panel" aria-selected="false" tabindex="-1" data-step="2">Privacy<i class="fill" aria-hidden="true"></i></button><button role="tab" id="tab-return" aria-controls="step-panel" aria-selected="false" tabindex="-1" data-step="3">Return<i class="fill" aria-hidden="true"></i></button></div>
  <div class="step-panel" id="step-panel" role="tabpanel" aria-labelledby="tab-photo" tabindex="0">
   <div class="mechanism" data-phase="0" aria-hidden="true">
    <canvas id="mechanism-human"></canvas>
@@ -3750,7 +3754,9 @@ function measureReturn(){
 }
 const returnSizing=new ResizeObserver(measureReturn);returnSizing.observe(mechanism);measureReturn();
 let current=0,pending=0,timer=0,userPaused=false,pageAway=false,sectionOpen=false,covered=false;
-let auto=true,autoCall=false,dwell=0,doneAt=-1,lastTick=0;   // the steps walk from 1 to 4 by themselves until the visitor takes over
+let auto=true,autoCall=false,stepT=0;   // the steps walk by themselves (the bars fill, then the next step starts) until the visitor takes over
+const STEP_MS=[5500,7500,9000,8000];   // how long each step stays (ms): about the length of its animation plus a moment
+const tabBar=document.querySelector('.step-tabs');
 const phases=['photo','token','privacy','return'];
 const contexts=['Your existing customer experience.','An identifier specific to your business.','Retention applies to the Human Token process.','Different encounter. The same connection.'];
 board.settle();returnBoard.settle();
@@ -3802,7 +3808,7 @@ function applyStep(index){
  privacyStartSlide=index===2&&(current===2||current===3)?returnSlide:0;
  privacyStartSize=index===2&&(current===2||current===3)?returnSize:0;
  returnMerge=0;
- current=pending=index;timer=0;dwell=0;doneAt=-1;
+ current=pending=index;timer=0;
  mechanism.style.setProperty('--return-lock-start',String(privacyStart));
  mechanism.style.setProperty('--return-reveal','0');
  mechanism.style.setProperty('--return-match','0');
@@ -3829,10 +3835,11 @@ function applyStep(index){
  board.settle();returnBoard.settle();
  particleHuman.setPhase(phases[index]);
  updateMotion();
+ startFill();
  copy.classList.remove('switching');
 }
 function selectStep(index){
- if(!autoCall)auto=false;   // any click / key of the visitor stops the automatic walk
+ if(!autoCall){auto=false;stopFill()}   // any click / key of the visitor stops the automatic walk
  pending=Math.max(0,Math.min(3,index));clearTimeout(timer);timer=0;
  if(pending===current){copy.classList.remove('switching');return}
  if(reduce.matches){applyStep(pending);return}
@@ -3860,17 +3867,18 @@ window.addEventListener('pageshow',()=>{pageAway=false;updateMotion()});
 applyStep(0);
 
 // The block is a section of the Human Token page: its story only runs while the section is open, and starts again from the photo each time
-/* Automatic walk: photo for a few seconds; then each step plays its own animation (token forming, photo deleted, same token found)
-   and rests a moment after it ends before the next one starts. It counts only while the section is open and in view, and stops at 4 */
-setInterval(()=>{
- const now=performance.now(),dt=Math.min(500,now-lastTick);lastTick=now;
- if(!auto||current===3||pending!==current||!sectionOpen||covered||pageAway||userPaused||document.hidden||reduce.matches)return;
- dwell+=dt;
- if(current>0&&doneAt<0&&(current===1?mechanism.dataset.formation==='complete':mechanism.dataset.privacyComplete==='true'))doneAt=dwell;
- const ready=current===0?dwell>=5200:(doneAt>=0&&dwell-doneAt>=(current===1?3800:3200));
- if(ready){autoCall=true;selectStep(current+1);autoCall=false}
-},200);
-window.humanTokenLearn={setActive(open){sectionOpen=Boolean(open);covered=false;if(sectionOpen){auto=true;applyStep(0)}updateMotion();},setCovered(c){covered=Boolean(c);updateMotion();}};
+/* Automatic walk, like the step bars of unico.io: the active bar fills (CSS, linear) while its step plays; when it is full the next step starts,
+   and after the last one it goes back to the first. It only runs while the section is open and in view; any click, key or arrow of the visitor stops it. */
+function stopFill(){clearTimeout(stepT);stepT=0;tabBar.classList.remove('playing')}
+function startFill(){
+ stopFill();
+ if(!auto||!sectionOpen||covered||pageAway||userPaused||document.hidden||reduce.matches)return;
+ void tabBar.offsetWidth;   // so the bar's animation starts again from zero
+ tabBar.style.setProperty('--dur',STEP_MS[current]+'ms');tabBar.classList.add('playing');
+ stepT=setTimeout(()=>{autoCall=true;selectStep((current+1)%4);autoCall=false},STEP_MS[current]);
+}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)stopFill();else startFill()});
+window.humanTokenLearn={setActive(open){sectionOpen=Boolean(open);covered=false;if(sectionOpen){auto=true;applyStep(0)}else stopFill();updateMotion();},setCovered(c){covered=Boolean(c);updateMotion();if(covered)stopFill();else startFill();}};
 
 </script>
 <script>
