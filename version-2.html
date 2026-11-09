@@ -289,6 +289,22 @@
     -webkit-user-select: none;
   }
 
+  /* A soft pastel glow along the bottom edge of the first section (blue, green and lilac, like the reference), with a thin gradient line on the edge.
+     It comes in after the opening and goes away when the section ends (body.s3-open). */
+  .base-glow { position: fixed; left: 0; right: 0; bottom: 0; height: min(38vh, 360px); z-index: 2; pointer-events: none; overflow: hidden; opacity: 0; transition: opacity .6s ease; }
+  body.gl .base-glow { opacity: 1; transition: opacity 1.8s ease .8s; }
+  body.s3-open .base-glow { opacity: 0; transition: opacity .7s ease; }
+  .base-glow::before { content: ""; position: absolute; left: -10%; right: -10%; bottom: -16%; height: 100%;
+    background:
+      radial-gradient(ellipse 34% 70% at 20% 100%, rgba(122, 188, 255, .38), transparent 74%),
+      radial-gradient(ellipse 30% 56% at 48% 100%, rgba(150, 236, 190, .27), transparent 74%),
+      radial-gradient(ellipse 36% 78% at 77% 100%, rgba(196, 148, 255, .42), transparent 74%);
+    filter: blur(28px); animation: base-glow-drift 18s ease-in-out infinite alternate; }
+  .base-glow::after { content: ""; position: absolute; left: 6%; right: 6%; bottom: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(196, 148, 255, .5) 18%, rgba(150, 236, 190, .5) 50%, rgba(122, 188, 255, .5) 82%, transparent); }
+  @keyframes base-glow-drift { from { transform: translateX(-4%); } to { transform: translateX(4%); } }
+  @media (prefers-reduced-motion: reduce) { .base-glow::before { animation: none; } }
+
   /* Round "back" control, shown only in the bust section (same glass look as the reference's UI buttons) */
   .back {
     position: fixed;
@@ -1203,6 +1219,7 @@
   </section>
   </div>
 </div>
+<div class="base-glow" aria-hidden="true"></div>
 <footer class="foot">© 2026 Unico. All rights reserved.</footer>
 <p class="credit">Head scan by Lee Perry-Smith, Infinite Realities, <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a></p>
 <nav class="rail" aria-label="Sections">
