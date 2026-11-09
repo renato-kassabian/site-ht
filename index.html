@@ -1585,7 +1585,7 @@ const QUAD_FRAG = TITLE_XFORM + PASTEL + /* glsl */`
     float decay = 1., rays = 0., sum = 0.;
     for (int i = 0; i < N; i++) {
       uv += stepv;
-      rays += texture2D(uMask, titleUv(uv)).r * decay;
+      rays += mix(texture2D(uMask, titleUv(uv)).r, texture2D(uText, titleUv(uv)).r, .5) * decay;   // half of the sharp lettering instead of only the blurred halo: a less smoky beam
       sum += decay;
       decay *= .96;
     }
