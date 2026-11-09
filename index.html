@@ -294,12 +294,12 @@
   .base-glow { position: fixed; left: 0; right: 0; bottom: 0; height: min(38vh, 360px); z-index: 2; pointer-events: none; overflow: hidden; opacity: 0; transition: opacity .6s ease; }
   body.gl .base-glow { opacity: 1; transition: opacity 1.8s ease .8s; }
   body.bust .base-glow { opacity: 0; transition: opacity .7s ease; }
-  .base-glow::before { content: ""; position: absolute; left: -10%; right: -10%; bottom: -3%; height: 100%;
+  .base-glow::before { content: ""; position: absolute; left: -10%; right: -10%; bottom: -16%; height: 100%;
     background:
-      radial-gradient(ellipse 28% 82% at 20% 100%, rgba(122, 188, 255, .32), transparent 66%),
-      radial-gradient(ellipse 24% 66% at 48% 100%, rgba(150, 236, 190, .23), transparent 66%),
-      radial-gradient(ellipse 30% 88% at 77% 100%, rgba(196, 148, 255, .35), transparent 66%);
-    filter: blur(9px); animation: base-glow-drift 18s ease-in-out infinite alternate; }
+      radial-gradient(ellipse 34% 70% at 20% 100%, rgba(122, 188, 255, .32), transparent 74%),
+      radial-gradient(ellipse 30% 56% at 48% 100%, rgba(150, 236, 190, .23), transparent 74%),
+      radial-gradient(ellipse 36% 78% at 77% 100%, rgba(196, 148, 255, .35), transparent 74%);
+    filter: blur(28px); animation: base-glow-drift 18s ease-in-out infinite alternate; }
   .base-glow::after { content: ""; position: absolute; left: 6%; right: 6%; bottom: 0; height: 1px;
     background: linear-gradient(90deg, transparent, rgba(196, 148, 255, .44) 18%, rgba(150, 236, 190, .44) 50%, rgba(122, 188, 255, .44) 82%, transparent); }
   @keyframes base-glow-drift { from { transform: translateX(-4%); } to { transform: translateX(4%); } }
