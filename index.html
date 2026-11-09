@@ -1572,7 +1572,7 @@ const QUAD_FRAG = TITLE_XFORM + PASTEL + /* glsl */`
 
     // resting state: dim cool-lit letters with a faint glow, rays fanning out of them and dust drifting through
     float rest = 0.;   // Variation B: no lettering and no resting beam: the letters are the dust, and the beam only shows where the pointer has been
-    float hot = rays * .3 * lit * (.5 + .5 * uPresence);   // a soft beam: the colour is carried by the grains
+    float hot = rays * .21 * lit * (.5 + .5 * uPresence);   // a soft beam: the colour is carried by the grains (strength .30 -> .21: softer)
 
     // faint ambient haze of the same hue so the beam has something to sink into
     vec2 q = (vUv - vec2(.5, .52)) * vec2(uRes.x / uRes.y, 1.) * vec2(.9, 2.2);
