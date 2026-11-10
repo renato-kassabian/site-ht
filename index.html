@@ -448,6 +448,8 @@
     font: 300 clamp(20px, 2vw, 28px) / 1.28 var(--font);   /* a step below the headings of the third and fourth sections (44px): 28px at most (it was 34px, 44px before) */
     color: rgba(255, 255, 255, .58);
   }
+  /* the Unico logo and the tagline sit a little higher (only these two move; the name, the code and the buttons stay where they are) */
+  .id-mark, .id-text { position: relative; top: calc(-1 * clamp(14px, 2.6vh, 26px)); }
   .id-own { color: #fff; visibility: hidden; opacity: 0; transition: opacity .7s ease .5s, visibility 0s linear 1.2s; }   /* pure white, on the same line; hidden it still takes its room, so nothing moves when it appears */
   .id.final .id-own { visibility: visible; opacity: 1; transition: opacity .7s ease .5s, visibility 0s; }
   .id-actions {
