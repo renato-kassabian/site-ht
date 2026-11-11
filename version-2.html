@@ -2495,8 +2495,8 @@ addEventListener('blur', leave);
 /* ── Bust layout (shared by the render loop and the name/ID placement) ── */
 function bustLayout(aspect, forText) {
   const wide = Math.min(Math.max(aspect - 1, 0), 1);
-  // Variation B: the busts sit a little further right (.115, was .09); the name block is still placed from the old position, so the gap between them grows
-  return { off: wide * (forText ? .09 : .115) * 16.17 * aspect, big: 1 + 1.2 * wide };   // the head sits right of centre and fills most of the height on wide screens
+  // Variation B: the busts sit further right (.145; .115 before, .09 originally); the name block is still placed from the old position, so the gap between them grows
+  return { off: wide * (forText ? .09 : .145) * 16.17 * aspect, big: 1 + 1.2 * wide };   // the head sits right of centre and fills most of the height on wide screens
 }
 const idBox = document.querySelector('.id');
 // On wide screens the name/ID block is placed so its right edge sits a short gap from the left edge of the head
