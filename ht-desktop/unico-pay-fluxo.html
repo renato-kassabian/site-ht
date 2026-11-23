@@ -3719,24 +3719,11 @@ const __default = {
 
     // Pede a permissão da câmera (prompt nativo, mobile e desktop). A tela
     // fica no loading até o usuário decidir.
-    setTimeout(async () => {
+    // Demo SAP: a câmera real nunca é pedida. Vai direto para a câmera simulada (modelo no oval).
+    setTimeout(() => {
       if (!document.body.contains(marker)) return;
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user' },
-        });
-        if (!document.body.contains(marker)) {
-          stream.getTracks().forEach((track) => track.stop());
-          return;
-        }
-        setCameraStream(stream);
-        navigate('sdkCamera');
-      } catch (err) {
-        console.warn('Câmera indisponível — usando câmera simulada.', err);
-        if (!document.body.contains(marker)) return;
-        setCameraStream(null);
-        navigate('sdkCamera');
-      }
+      setCameraStream(null);
+      navigate('sdkCamera');
     }, CAMERA_REQUEST_DELAY_MS);
   },
 };
