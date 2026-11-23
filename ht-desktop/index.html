@@ -1,0 +1,707 @@
+<title>Desktop SAP Demo</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+  /* Layout: full-screen macOS desktop. Wallpaper layer, menu bar on top, dock floating at the bottom. */
+  :root {
+    --menubar-h: 28px;
+    --ink: #ffffff;
+    --ink-soft: rgba(255,255,255,.78);
+    --glass: rgba(76,64,120,.42);
+    --glass-edge: rgba(255,255,255,.26);
+    --bar: rgba(20,22,40,.28);
+    --icon: clamp(22px, 5.1vw, 70px);
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Helvetica Neue", Arial, sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: #1b1a3a;
+    color: var(--ink);
+    font-family: var(--font);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+
+  /* ---------- Wallpaper (abstract ribbon, default-style) ---------- */
+  .wallpaper { position: fixed; inset: 0; overflow: hidden;
+    background:
+      radial-gradient(55% 70% at 6% 8%, #5a52e6 0%, rgba(90,82,230,0) 62%),
+      radial-gradient(45% 55% at 98% 6%, #ff8fc4 0%, rgba(255,143,196,0) 65%),
+      radial-gradient(50% 60% at 82% 70%, #e8409f 0%, rgba(232,64,159,0) 70%),
+      radial-gradient(70% 50% at 28% 100%, #2a1b86 0%, rgba(42,27,134,0) 70%),
+      linear-gradient(140deg, #4132c9 0%, #6b2fbb 48%, #b8369f 100%);
+  }
+  .wallpaper svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+  /* ---------- Ícones na área de trabalho ---------- */
+  .desktop { position: fixed; top: calc(var(--menubar-h) + 14px); right: 16px; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; z-index: 1; }
+  .dicon { width: 92px; padding: 4px 0 2px; display: flex; flex-direction: column; align-items: center; gap: 5px; border: 0; background: none; cursor: default; font: inherit; color: inherit; border-radius: 8px; }
+  .dicon svg { width: 64px; height: 64px; display: block; filter: drop-shadow(0 3px 5px rgba(0,0,0,.3)); }
+  .dicon .lbl { max-width: 100%; padding: 1px 7px; border-radius: 5px; font-size: 12px; line-height: 1.3; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+  .dicon:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .dicon.sel svg { filter: drop-shadow(0 3px 5px rgba(0,0,0,.3)) brightness(.8); }
+  .dicon.sel { background: rgba(255,255,255,.16); }
+  .dicon.sel .lbl { background: #0a60ff; text-shadow: none; }
+  @media (max-width: 720px) { .dicon svg { width: 52px; height: 52px; } .dicon { width: 76px; } .desktop { right: 8px; } }
+
+  /* ---------- Menu bar ---------- */
+  .menubar { position: fixed; inset: 0 0 auto 0; height: var(--menubar-h); display: flex; align-items: center; justify-content: space-between;
+    padding: 0 12px; background: var(--bar); backdrop-filter: blur(24px) saturate(1.4); -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    font-size: 13px; letter-spacing: .005em; z-index: 5; }
+  .menubar .left, .menubar .right { display: flex; align-items: center; gap: 18px; min-width: 0; }
+  .menubar .apple { width: 14px; height: 17px; fill: var(--ink); display: block; }
+  .menubar b { font-weight: 700; }
+  .menubar .right svg { height: 14px; width: auto; fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; display: block; }
+  .menubar .right .fill { fill: var(--ink); stroke: none; }
+  #clock { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* ---------- Dock ---------- */
+  .dock-wrap { position: fixed; left: 0; right: 0; bottom: 8px; display: flex; justify-content: center; z-index: 5; pointer-events: none; padding: 0 8px; }
+  .dock { pointer-events: auto; display: flex; align-items: flex-end; gap: clamp(3px, 1.5vw, 20px);
+    padding: 8px 14px; border-radius: 24px; max-width: 100%;
+    background: var(--glass); border: 1px solid var(--glass-edge);
+    backdrop-filter: blur(28px) saturate(1.6); -webkit-backdrop-filter: blur(28px) saturate(1.6);
+    box-shadow: 0 12px 40px rgba(10,8,40,.38), inset 0 1px 0 rgba(255,255,255,.22); }
+  .item { position: relative; width: var(--icon); height: var(--icon); flex: none; padding: 0; border: 0; background: none; cursor: pointer;
+    transform-origin: 50% 100%; transition: transform .12s ease-out; font: inherit; color: inherit; }
+  .item svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 3px 4px rgba(0,0,0,.3)); }
+  .item:focus-visible { outline: 2px solid #fff; outline-offset: 3px; border-radius: 14px; }
+  .item .tip { position: absolute; left: 50%; bottom: calc(100% + 14px); transform: translateX(-50%) translateY(4px); opacity: 0; pointer-events: none;
+    padding: 4px 11px; border-radius: 7px; background: rgba(40,42,60,.82); border: 1px solid rgba(255,255,255,.18);
+    font-size: 13px; white-space: nowrap; transition: opacity .12s, transform .12s; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  .item:hover .tip, .item:focus-visible .tip { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .item.run::after { content: ""; position: absolute; left: 50%; bottom: -6px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: rgba(255,255,255,.85); }
+  .sep { width: 1px; height: calc(var(--icon) * .8); align-self: center; background: rgba(255,255,255,.3); margin: 0 3px; flex: none; }
+  .item.bounce { animation: bounce .7s cubic-bezier(.3,.7,.4,1) 2; }
+  @keyframes bounce { 0%,100% { translate: 0 0; } 40% { translate: 0 calc(var(--icon) * -.55); } }
+
+  /* ---------- Janela do app (pop-up) ---------- */
+  .win { --sap-blue: #0a6ed1; position: fixed; left: 0; right: 0; margin: 0 auto; z-index: 3;
+    top: calc(var(--menubar-h) + 6vh); width: min(1180px, calc(100vw - 32px));
+    height: min(680px, calc(100vh - var(--menubar-h) - 6vh - 110px));
+    display: flex; flex-direction: column; overflow: hidden; border-radius: 12px; background: #fff; color: #fff;
+    box-shadow: 0 28px 80px rgba(14,8,50,.55), 0 0 0 1px rgba(0,0,0,.28); }
+  .win.opening { animation: winIn .32s cubic-bezier(.2,.8,.2,1) both; }
+  .win.closing { animation: winOut .2s ease-in both; }
+  @keyframes winIn  { from { opacity: 0; scale: .15; } to { opacity: 1; scale: 1; } }
+  @keyframes winOut { from { opacity: 1; scale: 1; } to { opacity: 0; scale: .15; } }
+  .win.max { left: 0 !important; top: var(--menubar-h) !important; width: 100% !important; height: calc(100% - var(--menubar-h)) !important; border-radius: 0; }
+  .wbar { position: relative; flex: none; height: 40px; display: flex; align-items: center; gap: 16px; padding: 0 14px;
+    background: var(--sap-blue); font-family: "Space Grotesk", var(--font); touch-action: none; }
+  .lights { display: flex; gap: 8px; }
+  .l { width: 12px; height: 12px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; }
+  .l.close { background: #ff5f57; } .l.min { background: #febc2e; } .l.max { background: #28c840; }
+  .l:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .wlogo { height: 20px; width: auto; display: block; }
+  .wnav { display: flex; align-items: center; gap: 18px; }
+  .wnav svg, .wmenu { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
+  .wmenu { margin-left: auto; width: 20px; opacity: .75; }
+  .wtitle { position: absolute; left: 0; right: 0; text-align: center; font-size: 15px; font-weight: 500; letter-spacing: .01em;
+    padding: 0 190px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+  .wbody { flex: 1; min-height: 0; background: #fafafa; overflow: hidden; container-type: inline-size; }
+  .wbody.is-home { overflow: auto; background: #f5f6f7; }
+
+  /* ---------- Home do SAP Account Manager (depois do sucesso) ---------- */
+  .sh { --ink: #1d2d3e; --mute: #556b82; --blue: #0064d9; --line: #d5dadd; min-height: 100%; display: flex; flex-direction: column;
+    background: #f5f6f7; color: var(--ink); font: 14px/1.4 "Inter", "Helvetica Neue", Arial, sans-serif; text-align: left; user-select: text; }
+  .sh.sh--in { animation: shIn .35s ease-out both; }
+  @keyframes shIn { from { opacity: 0; } to { opacity: 1; } }
+  .sh button { font: inherit; color: inherit; cursor: pointer; }
+  .sh-wrap { width: 100%; max-width: 1440px; margin: 0 auto; padding: 0 24px; }
+  .sh-top { background: #f4f5f6; }
+  .sh-top__in { height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .sh-brand { display: flex; align-items: center; gap: 16px; font-size: 16px; font-weight: 700; }
+  .sh-logo { height: 32px; width: auto; display: block; }
+  .sh-tools { display: flex; align-items: center; gap: 24px; }
+  .sh-tools svg { width: 18px; height: 18px; fill: none; stroke: var(--ink); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; display: block; }
+  .sh-explore { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+  .sh-explore svg { width: 12px; height: 12px; }
+  .sh-av { display: grid; place-items: center; border-radius: 50%; background: #d1efff; color: #0070f2; font-weight: 400; position: relative; flex: none; }
+  .sh-av--sm { width: 32px; height: 32px; font-size: 12px; }
+  .sh-av--lg { width: 120px; height: 120px; font-size: 48px; }
+  .sh-badge { position: absolute; right: 2px; bottom: 2px; width: 28px; height: 28px; border-radius: 50%; background: #0064d9; display: grid; place-items: center; }
+  .sh-badge svg { width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .sh-hero { background: #fff; border-bottom: 1px solid #89919a; }
+  .sh-id { display: flex; align-items: flex-start; gap: 32px; padding: 32px 0 24px; }
+  .sh-id__main { flex: 1; min-width: 0; }
+  .sh-lbl { font-size: 13px; color: var(--ink); }
+  .sh-id h1 { margin: 2px 0 8px; font-size: 28px; line-height: 1.2; font-weight: 700; }
+  .sh-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 32px; margin: 0; padding-left: 4px; }
+  .sh-facts dt { font-size: 11px; color: var(--ink); }
+  .sh-facts dd { margin: 2px 0 0; font-size: 15px; overflow-wrap: anywhere; }
+  .sh-btn { height: 40px; padding: 0 16px; border-radius: 8px; border: 1px solid #0064d9; background: #fff; color: #0064d9 !important; font-weight: 600; font-size: 14px; }
+  .sh-btn--fill { background: #0064d9; color: #fff !important; }
+  .sh-btn--sm { height: 36px; padding: 0 12px; }
+  .sh-btn:hover { filter: brightness(.96); }
+  .sh-tabs { display: flex; gap: 36px; }
+  .sh-tabs button { border: 0; background: none; padding: 14px 4px 16px; font-size: 16px; font-weight: 700; border-bottom: 3px solid transparent; margin-bottom: -1px; }
+  .sh-tabs .on { color: #0064d9; border-bottom-color: #0064d9; }
+  .sh-main { flex: 1; padding: 32px 0 48px; }
+  .sh-alert { display: flex; align-items: flex-start; gap: 10px; padding: 10px 16px; margin-bottom: 24px; border: 1px solid #e9730c; border-radius: 8px; background: #fff3b8; font-size: 15px; }
+  .sh-alert > svg { flex: none; width: 18px; height: 18px; margin-top: 3px; fill: #aa0808; }
+  .sh-alert p { margin: 0; flex: 1; min-width: 0; }
+  .sh-alert a { color: #0064d9; text-decoration: underline; margin-right: 6px; }
+  .sh-pill { border: 1px solid #e9730c; background: #fff3b8; color: #aa2a00 !important; border-radius: 10px; padding: 1px 10px; font-size: 13px; font-weight: 600; }
+  .sh-x { border: 0; background: none; padding: 2px; display: grid; }
+  .sh-x svg { width: 16px; height: 16px; fill: none; stroke: #0064d9; stroke-width: 2; stroke-linecap: round; }
+  .sh-cols { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 48px; align-items: start; }
+  .sh-card { background: #fff; border-radius: 12px; box-shadow: 0 0 2px rgba(34,53,72,.2), 0 2px 4px rgba(34,53,72,.2); overflow: hidden; }
+  .sh-card__head { display: flex; align-items: center; gap: 12px; padding: 16px; border-bottom: 1px solid var(--line); }
+  .sh-card__head h2 { margin: 0; margin-right: auto; font-size: 18px; font-weight: 700; }
+  .sh-card__head svg { width: 16px; height: 16px; fill: none; stroke: var(--ink); stroke-width: 1.7; stroke-linecap: round; }
+  .sh-row { display: grid; grid-template-columns: 2fr 1.4fr 24px; align-items: center; gap: 12px; padding: 0 16px; min-height: 44px; border-bottom: 1px solid var(--line); font-size: 15px; }
+  .sh-row--th { font-weight: 700; min-height: 44px; background: #fff; }
+  .sh-row--grp { background: #fafafa; font-weight: 600; grid-template-columns: 1fr; min-height: 36px; }
+  .sh-row--sel { background: #e5f6ff; border-bottom: 0; min-height: 40px; }
+  .sh-row svg { width: 12px; height: 12px; fill: none; stroke: #0064d9; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; justify-self: end; }
+  .sh-who { display: flex; align-items: center; gap: 16px; padding: 24px 24px 24px 24px; border-bottom: 1px solid var(--line); }
+  .sh-who .sh-av { width: 64px; height: 64px; }
+  .sh-who .sh-av svg { width: 28px; height: 28px; fill: none; stroke: #0064d9; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .sh-who .sh-badge { width: 18px; height: 18px; right: 0; bottom: 0; } .sh-who .sh-badge svg { width: 9px; height: 9px; stroke: #fff; fill: none; }
+  .sh-who__t { flex: 1; min-width: 0; }
+  .sh-who__t b { display: block; font-size: 20px; line-height: 1.2; }
+  .sh-who__t span { font-size: 15px; }
+  .sh-dots { border: 0; background: none; align-self: flex-start; padding: 0; font-size: 20px; line-height: 1; letter-spacing: 1px; color: var(--blue); }
+  .sh-info { padding: 24px; }
+  .sh-info h3 { margin: 0 0 16px; font-size: 20px; }
+  .sh-info dl { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 24px; margin: 0; }
+  .sh-info dt { font-size: 12px; } .sh-info dd { margin: 2px 0 0; font-size: 15px; }
+  .sh-foot { background: #e8ebed; }
+  .sh-foot__in { min-height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; font-size: 14px; padding-top: 12px; padding-bottom: 12px; }
+  .sh-foot nav { display: flex; gap: 48px; flex-wrap: wrap; }
+  @container (max-width: 860px) {
+    .sh-cols { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+    .sh-facts { grid-template-columns: minmax(0, 1fr); }
+    .sh-av--lg { width: 80px; height: 80px; font-size: 32px; }
+    .sh-id { gap: 16px; }
+    .sh-foot nav { gap: 20px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .sh.sh--in { animation: none; } }
+  .wbody iframe { width: 100%; height: 100%; border: 0; display: block; background: #fafafa; }
+  @media (max-width: 720px) { .wnav, .wlogo { display: none; } .wtitle { padding: 0 90px; font-size: 12px; } }
+  @media (prefers-reduced-motion: reduce) { .win.opening, .win.closing { animation: none; } }
+
+  @media (max-width: 560px) { .dock { gap: 3px; padding: 8px 10px; } }
+  @media (max-width: 720px) {
+    .menubar .left span:not(.keep), .menubar .right .opt { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .item { transition: none; }
+    .item.bounce { animation: none; }
+  }
+</style>
+
+<!-- Biblioteca de ícones (squircle estilo macOS Big Sur+). Cada ícone é um <symbol> reutilizado no Dock e na área de trabalho. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <path id="sq" d="M27.52 0H72.48C80.41 0 84.37 0 88.63 1.35C93.29 3.04 96.96 6.71 98.65 11.37C100 15.63 100 19.59 100 27.52V72.48C100 80.41 100 84.37 98.65 88.63C96.96 93.29 93.29 96.96 88.63 98.65C84.37 100 80.41 100 72.48 100H27.52C19.59 100 15.63 100 11.37 98.65C6.71 96.96 3.04 93.29 1.35 88.63C0 84.37 0 80.41 0 72.48V27.52C0 19.59 0 15.63 1.35 11.37C3.04 6.71 6.71 3.04 11.37 1.35C15.63 0 19.59 0 27.52 0Z"/>
+    <clipPath id="sqc"><use href="#sq"/></clipPath>
+
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".12"/></linearGradient>
+    <g id="finish"><use href="#sq" fill="url(#gloss)"/><use href="#sq" fill="none" stroke="#000" stroke-opacity=".14" stroke-width="1"/><use href="#sq" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width=".6" transform="translate(50 50) scale(.985) translate(-50 -50)"/></g>
+
+    <linearGradient id="fL" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fdcff"/><stop offset="1" stop-color="#3fa6ff"/></linearGradient>
+    <linearGradient id="fR" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2c86f7"/><stop offset="1" stop-color="#1259d6"/></linearGradient>
+    <linearGradient id="safBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dde5f1"/></linearGradient>
+    <linearGradient id="safBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#46dcff"/><stop offset="1" stop-color="#0a63f0"/></linearGradient>
+    <linearGradient id="mailBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#63d6ff"/><stop offset="1" stop-color="#1a6df0"/></linearGradient>
+    <linearGradient id="mailBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e3eaf6"/></linearGradient>
+    <linearGradient id="mailFlap" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cfdcf0"/></linearGradient>
+    <linearGradient id="msgBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6df683"/><stop offset="1" stop-color="#0fbd38"/></linearGradient>
+    <linearGradient id="photoBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#eceef3"/></linearGradient>
+    <linearGradient id="noteTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe066"/><stop offset="1" stop-color="#ffc400"/></linearGradient>
+    <linearGradient id="musicBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7d95"/><stop offset="1" stop-color="#f91d38"/></linearGradient>
+    <linearGradient id="storeBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2bcbff"/><stop offset="1" stop-color="#0a62f4"/></linearGradient>
+    <linearGradient id="setBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d6d9e0"/><stop offset="1" stop-color="#868b99"/></linearGradient>
+    <linearGradient id="gearMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#b3b8c4"/></linearGradient>
+    <linearGradient id="gearHole" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6a7080"/><stop offset="1" stop-color="#9aa0ae"/></linearGradient>
+    <linearGradient id="trashBody" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#cfd5e2"/><stop offset=".45" stop-color="#f6f8fc"/><stop offset="1" stop-color="#bdc4d3"/></linearGradient>
+    <linearGradient id="sapBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#eaeef5"/></linearGradient>
+    <linearGradient id="sapBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#00b8f1"/><stop offset=".5" stop-color="#0098dd"/><stop offset="1" stop-color="#0a4fa6"/></linearGradient>
+  </defs>
+
+  <!-- Finder -->
+  <symbol id="i-finder" viewBox="0 0 100 100">
+    <g clip-path="url(#sqc)">
+      <rect width="100" height="100" fill="url(#fL)"/>
+      <path d="M54 0H100V100H58C60 80 58 62 53 50C50 38 52 16 54 0Z" fill="url(#fR)"/>
+      <path d="M53 46C52 54 55 60 60 62" fill="none" stroke="#0b2e63" stroke-width="2.4" stroke-linecap="round"/>
+      <rect x="28" y="26" width="7.5" height="19" rx="3.75" fill="#0b2e63"/>
+      <rect x="65" y="26" width="7.5" height="19" rx="3.75" fill="#0b2e63"/>
+      <path d="M24 66C38 82 64 82 78 66" fill="none" stroke="#0b2e63" stroke-width="3.6" stroke-linecap="round"/>
+    </g><use href="#finish"/>
+  </symbol>
+
+  <!-- Safari -->
+  <symbol id="i-safari" viewBox="0 0 100 100">
+    <g clip-path="url(#sqc)">
+      <rect width="100" height="100" fill="url(#safBg)"/>
+      <circle cx="50" cy="50" r="40" fill="url(#safBlue)"/>
+      <circle cx="50" cy="50" r="36.500" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="3" stroke-dasharray=".9 2.87"/>
+      <g stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M50 12.500V19M50 81V87.500M12.500 50H19M81 50H87.500"/></g>
+      <g transform="rotate(45 50 50)"><path d="M50 17L58 50H42Z" fill="#ff4a3d"/><path d="M50 83L42 50H58Z" fill="#fff"/></g>
+      <circle cx="50" cy="50" r="2.200" fill="#fff"/>
+    </g><use href="#finish"/>
+  </symbol>
+
+  <!-- Mail -->
+  <symbol id="i-mail" viewBox="0 0 100 100">
+    <g clip-path="url(#sqc)">
+      <rect width="100" height="100" fill="url(#mailBg)"/>
+      <rect x="13" y="27" width="74" height="50" rx="7" fill="url(#mailBody)"/>
+      <path d="M13 34Q13 27 20 27H80Q87 27 87 34L50 62Z" fill="url(#mailFlap)"/>
+      <path d="M13 34L50 62L87 34" fill="none" stroke="#9fb6da" stroke-width="1.200" stroke-linejoin="round"/>
+    </g><use href="#finish"/>
+  </symbol>
+
+  <!-- Mensagens -->
+  <symbol id="i-messages" viewBox="0 0 100 100">
+    <g clip-path="url(#sqc)">
+      <rect width="100" height="100" fill="url(#msgBg)"/>
+      <ellipse cx="50" cy="45" rx="37" ry="29" fill="#fff"/>
+      <path d="M26 62C25 72 19 79 11 84C24 85 35 80 42 73Z" fill="#fff"/>
+    </g><use href="#finish"/>
+  </symbol>
+
+  <!-- Mapas -->
+  <symbol id="i-maps" viewBox="0 0 100 100">
+    <g clip-path="url(#sqc)">
+      <rect width="100" height="100" fill="#f3f0e6"/>
+      <path d="M0 0H44L28 36 0 46Z" fill="#bde7a4"/>
+      <path d="M100 56C82 58 70 76 76 100H100Z" fill="#8dcdf6"/>
+      <path d="M-5 38L105 82" stroke="#fff" stroke-width="6"/>
+      <path d="M26 -5L50 105" stroke="#fff" stroke-width="5"/>
+      <path d="M-5 76L105 24" stroke="#e8b830" stroke-width="11"/>
+      <path d="M-5 76L105 24" stroke="#ffd958" stroke-width="8"/>
+      <path d="M62 -5L74 40" stroke="#fff" stroke-width="4"/>
+      <rect x="55" y="14" width="30" height="21" rx="6" fill="#fff" stroke="#3b78d8" stroke-width="2"/>
+      <text x="70" y="29" text-anchor="middle" font-family="-apple-system,Inter,Arial,sans-serif" font-size="12" font-weight="700" fill="#1d1d1f">280</text>
+      <path d="M30 58L42 90L30 82L18 90Z" fill="#2f7bff" stroke="#fff" stroke-width="3.200" stroke-linejoin="round"/>
+    </g><use href="#finish"/>
+  </symbol>
+
+  <!-- Fotos -->
+  <symbol id="i-photos" viewBox="0 0 100 100">
+    <g clip-path="url(#sqc)">
+      <rect width="100" height="100" fill="url(#photoBg)"/>
+      <g style="mix-blend-mode:multiply" fill-opacity=".92">
+        <ellipse cx="50" cy="31" rx="13" ry="19" fill="#ffc81f"/>
+        <ellipse cx="50" cy="31" rx="13" ry="19" fill="#8fd63c" transform="rotate(45 50 50)"/>
+        <ellipse cx="50" cy="31" rx="13" ry="19" fill="#2fc86a" transform="rotate(90 50 50)"/>
+        <ellipse cx="50" cy="31" rx="13" ry="19" fill="#2bb8f0" transform="rotate(135 50 50)"/>
+        <ellipse cx="50" cy="31" rx="13" ry="19" fill="#4a6cf5" transform="rotate(180 50 50)"/>
+        <ellipse cx="50" cy="31" rx="13" ry="19" fill="#a45cf0" transform="rotate(225 50 50)"/>
+        <ellipse cx="50" cy="31" rx="13" ry="19" fill="#f4509b" transform="rotate(270 50 50)"/>
+        <ellipse cx="50" cy="31" rx="13" ry="19" fill="#ff7a2a" transform="rotate(315 50 50)"/>
+      </g>
+    </g><use href="#finish"/>
+  </symbol>
+
+  <!-- Calendário -->
+  <symbol id="i-calendar" viewBox="0 0 100 100">
+    <g clip-path="url(#sqc)">
+      <rect width="100" height="100" fill="#fff"/>
+      <text id="calDow" x="50" y="27" text-anchor="middle" font-family="-apple-system,Inter,Arial,sans-serif" font-size="12" font-weight="600" fill="#ff3b30" letter-spacing="1.200">NOV</text>
+      <text id="calDay" x="50" y="79" text-anchor="middle" font-family="-apple-system,Inter,Arial,sans-serif" font-size="54" font-weight="300" fill="#1d1d1f">23</text>
+    </g><use href="#finish"/>
+  </symbol>
+
+  <!-- Notas -->
+  <symbol id="i-notes" viewBox="0 0 100 100">
+    <g clip-path="url(#sqc)">
+      <rect width="100" height="100" fill="#fff"/>
+      <rect width="100" height="27" fill="url(#noteTop)"/>
+      <path d="M0 27H100" stroke="#d9a400" stroke-opacity=".45" stroke-width="1"/>
+      <g stroke="#e2e5ec" stroke-width="1.500"><path d="M0 44H100M0 58H100M0 72H100M0 86H100"/></g>
+      <path d="M16 38H48" stroke="#2b2b30" stroke-width="3.600" stroke-linecap="round" opacity=".0"/>
+    </g><use href="#finish"/>
+  </symbol>
+
+  <!-- Música -->
+  <symbol id="i-music" viewBox="0 0 100 100">
+    <g clip-path="url(#sqc)">
+      <rect width="100" height="100" fill="url(#musicBg)"/>
+      <g fill="#fff">
+        <rect x="35" y="27" width="4.800" height="44" rx="1"/>
+        <rect x="66" y="20" width="4.800" height="44" rx="1"/>
+        <path d="M35 24.500L70.800 17.500V31L35 38Z"/>
+        <ellipse cx="31" cy="71" rx="9.500" ry="7" transform="rotate(-22 31 71)"/>
+        <ellipse cx="62" cy="65" rx="9.500" ry="7" transform="rotate(-22 62 65)"/>
+      </g>
+    </g><use href="#finish"/>
+  </symbol>
+
+  <!-- App Store -->
+  <symbol id="i-appstore" viewBox="0 0 100 100">
+    <g clip-path="url(#sqc)">
+      <rect width="100" height="100" fill="url(#storeBg)"/>
+      <g stroke="#fff" stroke-linecap="round" fill="none">
+        <path d="M50 24L70 72" stroke-width="7.500"/>
+        <path d="M50 24L30 72" stroke-width="7.500"/>
+        <path d="M34 60H66" stroke-width="6.500"/>
+        <path d="M22 74H40M60 74H78" stroke-width="6.500"/>
+      </g>
+    </g><use href="#finish"/>
+  </symbol>
+
+  <!-- Ajustes do Sistema -->
+  <symbol id="i-settings" viewBox="0 0 100 100">
+    <g clip-path="url(#sqc)">
+      <rect width="100" height="100" fill="url(#setBg)"/>
+      <circle cx="50" cy="50" r="30" fill="none" stroke="#e9ebf0" stroke-width="9" stroke-dasharray="7.850 7.850" transform="rotate(4 50 50)"/>
+      <circle cx="50" cy="50" r="27" fill="url(#gearMetal)"/>
+      <circle cx="50" cy="50" r="12.500" fill="url(#gearHole)"/>
+      <circle cx="50" cy="50" r="9" fill="#8a90a0"/>
+      <circle cx="50" cy="50" r="27" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width=".8"/>
+    </g><use href="#finish"/>
+  </symbol>
+
+  <!-- Lixeira (sem tile, como no macOS) -->
+  <symbol id="i-trash" viewBox="0 0 100 100">
+    <path d="M24 28H76L71 90Q70.500 95 66 95H34Q29.500 95 29 90Z" fill="url(#trashBody)" fill-opacity=".94" stroke="#98a0b2" stroke-opacity=".7" stroke-width="1"/>
+    <g stroke="#8d95a8" stroke-opacity=".7" stroke-width="1.600" stroke-linecap="round"><path d="M35 38L37 86M42.500 38L43.500 86M50 38V86M57.500 38L56.500 86M65 38L63 86"/></g>
+    <ellipse cx="50" cy="28" rx="26" ry="5.500" fill="#eef1f7" stroke="#a3abbc" stroke-width="1"/>
+    <ellipse cx="50" cy="28.500" rx="23" ry="3.600" fill="#7e869a"/>
+  </symbol>
+
+  <!-- SAP: tile branco + logo -->
+  <symbol id="i-sap" viewBox="0 0 100 100">
+    <g clip-path="url(#sqc)">
+      <rect width="100" height="100" fill="url(#sapBg)"/>
+      <g transform="translate(11 31) scale(.1845)">
+        <path d="M0 0H412L206 204H0Z" fill="url(#sapBlue)"/>
+        <g fill="none" stroke="#fff" stroke-width="17" stroke-linejoin="bevel">
+          <path d="M108 62C102 44 60 44 60 66C60 88 112 78 112 100C112 122 66 122 52 104"/>
+          <path d="M121 124L156 48L191 124M137 100H175"/>
+          <path d="M206 124V48H236C270 48 270 98 236 98H206"/>
+        </g>
+      </g>
+    </g><use href="#finish"/>
+  </symbol>
+</svg>
+
+<div class="wallpaper" aria-hidden="true">
+  <svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <linearGradient id="wDark" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2a1a8c" stop-opacity=".9"/><stop offset="1" stop-color="#5a2bb0" stop-opacity=".6"/></linearGradient>
+      <linearGradient id="wPink" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#c0359f" stop-opacity=".9"/><stop offset=".6" stop-color="#ff5fb0" stop-opacity=".95"/><stop offset="1" stop-color="#ff9ccf" stop-opacity=".9"/></linearGradient>
+      <linearGradient id="wBlue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6d6bff" stop-opacity=".7"/><stop offset="1" stop-color="#3c2bb8" stop-opacity=".0"/></linearGradient>
+      <filter id="wBlur" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="14"/></filter>
+    </defs>
+    <g filter="url(#wBlur)">
+      <path d="M-100 150 C 200 60, 520 260, 760 520 S 1000 860, 640 1100 L-100 1100 Z" fill="url(#wBlue)"/>
+      <path d="M-100 1000 C 260 760, 640 960, 960 700 S 1500 340, 1700 420 L1700 1100 L-100 1100 Z" fill="url(#wDark)"/>
+      <path d="M560 1100 C 820 820, 1120 780, 1300 540 S 1560 170, 1700 120 L1700 1100 Z" fill="url(#wPink)"/>
+    </g>
+    <path d="M620 1100 C 880 840, 1160 800, 1340 560 S 1580 200, 1700 150" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="3"/>
+    <path d="M700 1100 C 940 870, 1200 830, 1380 600 S 1600 250, 1700 210" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="2"/>
+  </svg>
+</div>
+
+<div class="desktop">
+  <!-- SAP na área de trabalho: um clique seleciona, duplo clique abre -->
+  <button class="dicon" id="desk-sap" aria-label="SAP">
+    <svg viewBox="0 0 100 100" aria-hidden="true"><use href="#i-sap" width="100" height="100"/></svg>
+    <span class="lbl">SAP</span>
+  </button>
+</div>
+
+<header class="menubar">
+  <div class="left">
+    <svg class="apple" viewBox="0 0 384 512" aria-label="Apple"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
+    <span class="keep"><b id="appname">Finder</b></span>
+    <span>Arquivo</span><span>Editar</span><span>Visualizar</span><span>Ir</span><span>Janela</span><span>Ajuda</span>
+  </div>
+  <div class="right">
+    <svg class="opt" viewBox="0 0 28 14" aria-label="Bateria"><rect x="1" y="2" width="22" height="10" rx="3"/><rect class="fill" x="3" y="4" width="15" height="6" rx="1.4"/><path d="M25 5.5v3"/></svg>
+    <svg class="opt" viewBox="0 0 18 14" aria-label="Wi-Fi"><path d="M1.5 5a10 10 0 0 1 15 0M4 8a6.4 6.4 0 0 1 10 0M6.6 11a2.8 2.8 0 0 1 4.8 0"/><circle class="fill" cx="9" cy="12.4" r="1"/></svg>
+    <svg class="opt" viewBox="0 0 16 14" aria-label="Pesquisar"><circle cx="6.5" cy="6" r="4.4"/><path d="M10 9.6 14 13"/></svg>
+    <span id="clock">seg 23 nov  17:26</span>
+  </div>
+</header>
+
+<!-- Home do SAP Account Manager: aparece na janela quando o fluxo de reconhecimento termina. -->
+<template id="tpl-sap-home">
+  <div class="sh">
+    <header class="sh-top"><div class="sh-wrap sh-top__in">
+      <div class="sh-brand">
+        <svg class="sh-logo" viewBox="0 0 412 204" aria-label="SAP"><defs><linearGradient id="gSapH" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#00b8f1"/><stop offset=".5" stop-color="#0098dd"/><stop offset="1" stop-color="#0a4fa6"/></linearGradient></defs><path d="M0 0H412L206 204H0Z" fill="url(#gSapH)"/><g fill="none" stroke="#fff" stroke-width="17" stroke-linejoin="bevel"><path d="M108 62C102 44 60 44 60 66C60 88 112 78 112 100C112 122 66 122 52 104"/><path d="M121 124L156 48L191 124M137 100H175"/><path d="M206 124V48H236C270 48 270 98 236 98H206"/></g></svg>
+        <span>Account Manager</span>
+      </div>
+      <div class="sh-tools">
+        <span class="sh-explore">Explore SAP <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg></span>
+        <svg viewBox="0 0 24 24" aria-label="Search"><circle cx="10.500" cy="10.500" r="6.500"/><path d="M15.500 15.500L21 21"/></svg>
+        <svg viewBox="0 0 24 24" aria-label="Notifications"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.500 2h-15Z"/><path d="M10 21h4"/></svg>
+        <span class="sh-av sh-av--sm">M</span>
+      </div>
+    </div></header>
+
+    <section class="sh-hero"><div class="sh-wrap">
+      <div class="sh-id">
+        <div class="sh-av sh-av--lg">M<span class="sh-badge"><svg viewBox="0 0 24 24"><path d="M4 20l1-4L16.500 4.500a2.100 2.100 0 0 1 3 3L8 19Z"/></svg></span></div>
+        <div class="sh-id__main">
+          <div class="sh-lbl">Your Universal ID</div>
+          <h1>Mariana Costa</h1>
+          <dl class="sh-facts">
+            <div><dt>Universal ID email</dt><dd>mariana.costa@unico.io</dd></div>
+            <div><dt>Country</dt><dd>Brazil</dd></div>
+            <div><dt>Username</dt><dd>marianacosta-teste_20</dd></div>
+          </dl>
+        </div>
+        <button class="sh-btn">Edit</button>
+      </div>
+      <nav class="sh-tabs"><button class="on">Identities</button><button>Privacy</button></nav>
+    </div></section>
+
+    <main class="sh-main"><div class="sh-wrap">
+      <div class="sh-alert" data-alert>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3L22 21H2Z"/><path d="M12 10v5M12 17.500v1" stroke="#fff3b8" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+        <p>A recovery email is not associated with your Universal ID. Having a recovery email and identity will ensure your continued access to your Learning achievements and Community content.<br><a href="#" data-noop>Add email</a><button class="sh-pill" data-dismiss>Don't show again</button></p>
+        <button class="sh-x" data-dismiss aria-label="Close"><svg viewBox="0 0 16 16"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+      </div>
+      <div class="sh-cols">
+        <section class="sh-card">
+          <div class="sh-card__head">
+            <h2>Identities (1)</h2>
+            <svg viewBox="0 0 24 24" aria-label="Search"><circle cx="10.500" cy="10.500" r="6.500"/><path d="M15.500 15.500L21 21"/></svg>
+            <button class="sh-btn sh-btn--fill sh-btn--sm">Add email</button>
+            <button class="sh-btn sh-btn--sm">Sort</button>
+          </div>
+          <div class="sh-row sh-row--th"><span>User ID</span><span>Country</span><span></span></div>
+          <div class="sh-row sh-row--grp"><span>1 identity assigned to mariana.costa@unico.io</span></div>
+          <div class="sh-row sh-row--sel"><span>P2058291736</span><span>Brazil</span><svg viewBox="0 0 12 12"><path d="M4 2l4 4-4 4"/></svg></div>
+        </section>
+        <aside class="sh-card">
+          <div class="sh-who">
+            <span class="sh-av"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0Z"/></svg><span class="sh-badge"><svg viewBox="0 0 24 24"><path d="M4 20l1-4L16.500 4.500a2.100 2.100 0 0 1 3 3L8 19Z"/></svg></span></span>
+            <div class="sh-who__t"><b>P2058291736</b><span>Mariana Costa</span></div>
+            <button class="sh-dots" aria-label="More">&bull;&bull;&bull;</button>
+          </div>
+          <div class="sh-info">
+            <h3>Identity information</h3>
+            <dl>
+              <div><dt>Created on</dt><dd data-today></dd></div>
+              <div><dt>Status</dt><dd>Active</dd></div>
+              <div><dt>Last login</dt><dd data-today></dd></div>
+              <div><dt>Type</dt><dd>Public</dd></div>
+            </dl>
+          </div>
+        </aside>
+      </div>
+    </div></main>
+
+    <footer class="sh-foot"><div class="sh-wrap sh-foot__in">
+      <span>&copy; <span data-year></span> SAP SE or an SAP affiliate company. All rights reserved.</span>
+      <nav><span>Support</span><span>Privacy</span><span>Terms of use</span><span>Legal disclosure</span><span>Cookie statement</span><span>Cookie preferences</span></nav>
+    </div></footer>
+  </div>
+</template>
+
+<!-- Janela que abre ao clicar no SAP. O conteúdo da demo entra em #sap-body. -->
+<section class="win" id="win-sap" role="dialog" aria-label="SAP" hidden>
+  <header class="wbar" id="wbar">
+    <div class="lights">
+      <button class="l close" id="w-close" aria-label="Fechar"></button>
+      <button class="l min" id="w-min" aria-label="Minimizar"></button>
+      <button class="l max" id="w-max" aria-label="Ampliar"></button>
+    </div>
+    <svg class="wlogo" viewBox="0 0 412 204" aria-label="SAP"><path d="M0 0H412L206 204H0Z" fill="#fff"/><g fill="none" stroke="#0a6ed1" stroke-width="17" stroke-linejoin="bevel"><path d="M108 62C102 44 60 44 60 66C60 88 112 78 112 100C112 122 66 122 52 104"/><path d="M121 124L156 48L191 124M137 100H175"/><path d="M206 124V48H236C270 48 270 98 236 98H206"/></g></svg>
+    <div class="wnav">
+      <svg viewBox="0 0 24 24" aria-label="Voltar"><path d="M15 5l-7 7 7 7"/></svg>
+      <svg viewBox="0 0 24 24" aria-label="Avançar"><path d="M9 5l7 7-7 7"/></svg>
+      <svg viewBox="0 0 24 24" aria-label="Recarregar"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg>
+    </div>
+    <div class="wtitle" id="wtitle">SAP</div>
+    <svg class="wmenu" viewBox="0 0 24 24" aria-label="Menu"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </header>
+  <div class="wbody" id="sap-body"></div>
+</section>
+
+<main class="dock-wrap">
+  <nav class="dock" id="dock" aria-label="Dock">
+    <button class="item run" data-app="Finder"><span class="tip">Finder</span><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#i-finder" width="100" height="100"/></svg></button>
+    <button class="item run" data-app="Safari"><span class="tip">Safari</span><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#i-safari" width="100" height="100"/></svg></button>
+    <button class="item run" data-app="Mail"><span class="tip">Mail</span><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#i-mail" width="100" height="100"/></svg></button>
+    <button class="item" data-app="Mensagens"><span class="tip">Mensagens</span><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#i-messages" width="100" height="100"/></svg></button>
+    <button class="item" data-app="Mapas"><span class="tip">Mapas</span><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#i-maps" width="100" height="100"/></svg></button>
+    <button class="item" data-app="Fotos"><span class="tip">Fotos</span><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#i-photos" width="100" height="100"/></svg></button>
+    <button class="item" data-app="Calendário"><span class="tip">Calendário</span><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#i-calendar" width="100" height="100"/></svg></button>
+    <button class="item" data-app="Notas"><span class="tip">Notas</span><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#i-notes" width="100" height="100"/></svg></button>
+    <button class="item" data-app="Música"><span class="tip">Música</span><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#i-music" width="100" height="100"/></svg></button>
+    <button class="item" data-app="App Store"><span class="tip">App Store</span><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#i-appstore" width="100" height="100"/></svg></button>
+    <button class="item" data-app="Ajustes do Sistema"><span class="tip">Ajustes do Sistema</span><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#i-settings" width="100" height="100"/></svg></button>
+
+    <span class="sep" aria-hidden="true"></span>
+
+    <button class="item" id="app-sap" data-app="SAP"><span class="tip">SAP</span><svg viewBox="0 0 100 100" aria-label="SAP"><use href="#i-sap" width="100" height="100"/></svg></button>
+    <button class="item" data-app="Lixeira"><span class="tip">Lixeira</span><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#i-trash" width="100" height="100"/></svg></button>
+  </nav>
+</main>
+
+<script>
+(function () {
+  // Relógio e data do Calendário em português
+  function tick() {
+    var d = new Date();
+    var wd = d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
+    var mo = d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+    var hm = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('clock').textContent = wd + ' ' + d.getDate() + ' ' + mo + '  ' + hm;
+    document.getElementById('calDow').textContent = mo.toUpperCase();
+    var cap = function (s) { return s.charAt(0).toUpperCase() + s.slice(1); };
+    var wdL = cap(d.toLocaleDateString('pt-BR', { weekday: 'short' }));
+    var moL = cap(d.toLocaleDateString('pt-BR', { month: 'short' }));
+    document.getElementById('wtitle').textContent = wdL + ' ' + d.getDate() + ' De ' + moL + ' - ' + hm + ' - SAP - v1.0.0';
+    document.getElementById('calDay').textContent = d.getDate();
+  }
+  tick(); setInterval(tick, 15000);
+
+  // Ampliação do Dock ao passar o mouse
+  var dock = document.getElementById('dock');
+  var items = Array.prototype.slice.call(dock.querySelectorAll('.item'));
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function magnify(e) {
+    if (reduce) return;
+    items.forEach(function (it) {
+      var r = it.getBoundingClientRect();
+      var dist = Math.abs(e.clientX - (r.left + r.width / 2));
+      var s = 1 + 0.55 * Math.max(0, 1 - dist / (r.width * 2.6));
+      it.style.transform = 'scale(' + s.toFixed(3) + ')';
+    });
+  }
+  function reset() { items.forEach(function (it) { it.style.transform = ''; }); }
+  dock.addEventListener('mousemove', magnify);
+  dock.addEventListener('mouseleave', reset);
+
+  // Clique: o ícone salta. O SAP é o ponto de partida da demo.
+  items.forEach(function (it) {
+    it.addEventListener('click', function () {
+      it.classList.remove('bounce'); void it.offsetWidth; it.classList.add('bounce');
+      if (it.id === 'app-sap') {
+        window.dispatchEvent(new CustomEvent('demo:open-sap'));
+      }
+    });
+    it.addEventListener('animationend', function () { it.classList.remove('bounce'); });
+  });
+
+  // Ícone da área de trabalho: clique seleciona, duplo clique abre (e faz o Dock saltar)
+  var desk = document.getElementById('desk-sap');
+  desk.addEventListener('click', function (e) { e.stopPropagation(); desk.classList.add('sel'); });
+  desk.addEventListener('dblclick', function (e) { e.stopPropagation(); document.getElementById('app-sap').click(); });
+  desk.addEventListener('keydown', function (e) { if (e.key === 'Enter') document.getElementById('app-sap').click(); });
+  document.addEventListener('click', function () { desk.classList.remove('sel'); });
+
+  // Janela do SAP: abre saindo do ícone do Dock
+  var win = document.getElementById('win-sap');
+  var wbar = document.getElementById('wbar');
+  var dockSap = document.getElementById('app-sap');
+  var appName = document.getElementById('appname');
+  var openTimer;
+  var sapBody = document.getElementById('sap-body');
+
+  // A experiência (Human Token, Desktop) vive em unico-pay-fluxo.html, publicado junto desta página.
+  // Ela é buscada uma vez e montada num iframe a cada abertura, então começa do zero sempre.
+  var protoReq = null;
+  function loadProto() {
+    if (!protoReq) {
+      protoReq = fetch('unico-pay-fluxo.html').then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.text();
+      });
+      protoReq.catch(function () { protoReq = null; });
+    }
+    return protoReq;
+  }
+  // Fim do fluxo: o modal some e a janela passa a mostrar a home do SAP Account Manager.
+  function showHome() {
+    var f = sapBody.querySelector('iframe');
+    if (!f) return;
+    f.style.transition = 'opacity .25s ease'; f.style.opacity = '0';
+    setTimeout(function () {
+      if (win.hidden) return;
+      var d = new Date();
+      var today = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      var frag = document.getElementById('tpl-sap-home').content.cloneNode(true);
+      frag.querySelectorAll('[data-today]').forEach(function (el) { el.textContent = today; });
+      frag.querySelector('[data-year]').textContent = d.getFullYear();
+      frag.querySelectorAll('[data-dismiss]').forEach(function (b) {
+        b.addEventListener('click', function () { var a = b.closest('[data-alert]'); if (a) a.remove(); });
+      });
+      frag.querySelectorAll('[data-noop]').forEach(function (a) { a.addEventListener('click', function (e) { e.preventDefault(); }); });
+      sapBody.textContent = '';
+      sapBody.classList.add('is-home');
+      sapBody.appendChild(frag);
+      sapBody.firstElementChild.classList.add('sh--in');
+    }, 260);
+  }
+  window.addEventListener('message', function (e) {
+    var f = sapBody.querySelector('iframe');
+    if (f && e.source === f.contentWindow && e.data && e.data.sapDone) showHome();
+  });
+
+  function mountExperience() {
+    sapBody.textContent = '';
+    sapBody.classList.remove('is-home');
+    var f = document.createElement('iframe');
+    f.title = 'Experiência Human Token';
+    f.setAttribute('allow', 'camera; microphone');
+    sapBody.appendChild(f);
+    loadProto().then(function (html) { f.srcdoc = html; }).catch(function () {
+      sapBody.textContent = 'Não foi possível carregar a experiência.';
+      sapBody.style.cssText = 'display:grid;place-items:center;color:#4f4f4f;font:14px var(--font)';
+    });
+  }
+  function unmountExperience() { sapBody.textContent = ''; sapBody.classList.remove('is-home'); sapBody.removeAttribute('style'); }
+  setTimeout(function () { loadProto().catch(function () {}); }, 800);
+
+  function openSap() {
+    if (!win.hidden) return;
+    clearTimeout(openTimer);
+    openTimer = setTimeout(function () {
+      var r = dockSap.getBoundingClientRect();
+      win.hidden = false;
+      var w = win.getBoundingClientRect();
+      win.style.transformOrigin = (r.left + r.width / 2 - w.left) + 'px ' + (r.top + r.height / 2 - w.top) + 'px';
+      win.classList.remove('closing'); win.classList.add('opening');
+      dockSap.classList.add('run');
+      appName.textContent = 'SAP';
+      mountExperience();
+    }, 450);
+  }
+  function closeSap() {
+    if (win.hidden || win.classList.contains('closing')) return;
+    var r = dockSap.getBoundingClientRect();
+    var w = win.getBoundingClientRect();
+    win.style.transformOrigin = (r.left + r.width / 2 - w.left) + 'px ' + (r.top + r.height / 2 - w.top) + 'px';
+    win.classList.remove('opening'); win.classList.add('closing');
+    dockSap.classList.remove('run');
+    appName.textContent = 'Finder';
+    var done = function () { win.hidden = true; win.classList.remove('closing'); unmountExperience(); };
+    if (reduce) done(); else win.addEventListener('animationend', done, { once: true });
+  }
+  window.addEventListener('demo:open-sap', openSap);
+  document.getElementById('w-close').addEventListener('click', closeSap);
+  document.getElementById('w-min').addEventListener('click', closeSap);
+  document.getElementById('w-max').addEventListener('click', function () { win.classList.toggle('max'); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSap(); });
+
+  // Arrastar a janela pela barra de título
+  var drag = null;
+  wbar.addEventListener('pointerdown', function (e) {
+    if (e.target.closest('button') || win.classList.contains('max')) return;
+    var r = win.getBoundingClientRect();
+    win.style.left = r.left + 'px'; win.style.top = r.top + 'px'; win.style.right = 'auto'; win.style.margin = '0';
+    drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
+    wbar.setPointerCapture(e.pointerId);
+  });
+  wbar.addEventListener('pointermove', function (e) {
+    if (!drag) return;
+    win.style.left = (e.clientX - drag.dx) + 'px';
+    win.style.top = Math.max(28, e.clientY - drag.dy) + 'px';
+  });
+  wbar.addEventListener('pointerup', function () { drag = null; });
+})();
+</script>
