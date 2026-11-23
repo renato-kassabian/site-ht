@@ -615,7 +615,7 @@
   var protoReq = null;
   function loadProto() {
     if (!protoReq) {
-      protoReq = fetch('unico-pay-fluxo.html').then(function (r) {
+      protoReq = fetch('unico-pay-fluxo.html', { cache: 'no-cache' }).then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.text();
       });
